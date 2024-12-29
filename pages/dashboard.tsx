@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { TableContainer } from '@mui/material';
 import {
+  TableContainer,
+  Paper,
   Container,
   Typography,
   Grid,
@@ -9,6 +10,7 @@ import {
   AppBar,
   Toolbar,
   Box,
+  LinearProgress,
 } from '@mui/material';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
@@ -37,20 +39,20 @@ const Dashboard = () => {
   const [income, setIncome] = useState<number>(12000);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [savedAmount, setSavedAmount] = useState<number>(500);
-  const [savingsGoal] = useState<number>(4500);
+  const [savingsGoal] = useState<number>(100000);
 
   useEffect(() => {
     const dummyCSV = `
 Date,Category,Amount
-2024-12-01,Food,50
-2024-12-02,Rent,1000
+2024-12-01,Food,150
+2024-12-02,Rent,1800
 2024-12-03,Travel,200
-2024-12-04,Utilities,150
+2024-12-04,Utilities,250
 2024-12-05,Food,60
 2024-12-06,Other,300
-2024-12-07,Travel,400
-2024-12-08,Food,45
-2024-12-09,Rent,1000
+2024-12-07,Travel,300
+2024-12-08,Food,145
+2024-12-09,Rent,1800
 2024-12-10,Utilities,120
     `;
     const parsed = Papa.parse(dummyCSV.trim(), { header: true });
@@ -60,7 +62,6 @@ Date,Category,Amount
   const totalExpenses = transactions.reduce((sum, transaction) => sum + parseFloat(transaction.Amount), 0);
   const remainingBudget = income - totalExpenses;
 
-  // Chart Data
   const categoryTotals = categories.map((category) => ({
     category,
     total: transactions
@@ -88,34 +89,22 @@ Date,Category,Amount
     total: entry.total,
   }));
 
-  const generateAdvice = () => {
-    const advice = [];
-    const highestCategory = categoryTotals.reduce(
-      (prev, curr) => (curr.total > prev.total ? curr : prev),
-      { category: '', total: 0 }
-    );
+  const savingsProgress = (savedAmount / savingsGoal) * 100;
 
-    if (totalExpenses > income) {
-      advice.push({ message: "You're spending more than your income! Reduce discretionary expenses.", icon: <ExpenseIcon />, color: '#fbe9e7' });
-    } else if (remainingBudget > income * 0.2) {
-      advice.push({ message: "Great job! You have more than 20% of your income left. Consider saving or investing.", icon: <SavingsIcon />, color: '#e8f5e9' });
-    } else {
-      advice.push({ message: "Aim to save at least 20% of your income for better financial health.", icon: <SavingsIcon />, color: '#fff3e0' });
-    }
-
-    if (highestCategory.total > income * 0.3) {
-      advice.push({ message: `Your highest spending category is "${highestCategory.category}". Consider reducing expenses here.`, icon: <ExpenseIcon />, color: '#ffe0b2' });
-    }
-
-    if (savedAmount < savingsGoal) {
-      advice.push({ message: `You're $${savingsGoal - savedAmount} away from your savings goal. Allocate more to savings.`, icon: <SavingsIcon />, color: '#e1f5fe' });
-    }
-
-    return advice;
+  const predictSavings = () => {
+    const averageSavings = remainingBudget > 0 ? remainingBudget * 0.3 : 0;
+    const monthsToGoal = (savingsGoal - savedAmount) / averageSavings;
+    return {
+      averageSavings: averageSavings.toFixed(2),
+      monthsToGoal: monthsToGoal > 0 ? Math.ceil(monthsToGoal) : 0,
+    };
   };
 
+  const prediction = predictSavings();
+
+  // Transactions Table Component
   const TransactionsTable = ({ transactions }: { transactions: any[] }) => (
-    <TableContainer>
+    <TableContainer component={Paper}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ backgroundColor: '#f5f5f5' }}>
@@ -185,7 +174,22 @@ Date,Category,Amount
             </Card>
           </Grid>
 
-          {/* Visualizations */}
+          {/* Savings Progress */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6">Savings Progress</Typography>
+                <Typography>Saved: ${savedAmount} / ${savingsGoal}</Typography>
+                <LinearProgress variant="determinate" value={savingsProgress} style={{ marginTop: '10px' }} />
+                <Typography style={{ marginTop: '10px' }}>
+                  At your current spending rate, you can save <strong>${prediction.averageSavings}</strong> per month.
+                  It will take approximately <strong>{prediction.monthsToGoal} months</strong> to reach your goal.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Spending by Category */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
@@ -194,6 +198,8 @@ Date,Category,Amount
               </CardContent>
             </Card>
           </Grid>
+
+          {/* Monthly Spending Trends */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
@@ -225,27 +231,6 @@ Date,Category,Amount
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </Grid>
-
-          {/* Financial Advice Section */}
-          <Grid item xs={12}>
-            <Typography variant="h5" gutterBottom>
-              Personalized Financial Advice
-            </Typography>
-            <Grid container spacing={3}>
-              {generateAdvice().map((advice, index) => (
-                <Grid item xs={12} md={6} key={index}>
-                  <Card style={{ backgroundColor: advice.color }}>
-                    <CardContent>
-                      {advice.icon}
-                      <Typography variant="body1" style={{ marginTop: '10px' }}>
-                        {advice.message}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
           </Grid>
 
           {/* Transactions Table */}
